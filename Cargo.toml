@@ -1,0 +1,24 @@
+[package]
+name = "box_intersect_ze"
+version = "0.1.0"
+authors = ["derivator <derivator@users.noreply.github.com>"]
+edition = "2018"
+license = "GPL-3.0-or-later"
+description = "Broad phase collision detection using Zomorodian and Edelsbrunner's hybrid algorithm (streamed segment trees with pruning and scanning)"
+repository = "https://github.com/derivator/box_intersect_ze"
+keywords = ["collision", "segment", "tree", "AABB", "box"]
+categories = ["game-development"]
+
+[dependencies]
+rand = { version = "0.8.3", optional = true }
+
+[features]
+default = ["rand-crate"]
+rand-crate = ["rand"]
+
+[[example]]
+name = "benchmark"
+required-features = ["rand-crate"]
+
+[dev-dependencies]
+rand_chacha = "0.3.0"

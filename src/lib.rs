@@ -114,7 +114,7 @@ pub fn intersect_ze_custom<B, ID, R, const CUTOFF: usize>(
 /// Should perform reasonably up to approximately 1,000 boxes
 /// * `a` and `b` may be either the same or distinct [`BBoxSet`]s and must be sorted before calling.
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
-pub fn intersect_scan<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(ID, ID)>)
+pub fn intersect_scan<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(usize, usize)>)
 where
     B: BBox,
     ID: Copy + PartialOrd,

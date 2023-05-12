@@ -38,7 +38,7 @@ fn random_boxes(n: usize, start: usize, seed: u64) -> BBoxSet<Box3Df32, usize> {
     let nf = n as f32;
     let len_max = nf.powf(2.0 / 3.0).floor() as usize;
     let lo_max = n - len_max;
-    for i in start..n {
+    for i in start..start + n {
         let mut min = [0.0; 3];
         let mut max = [0.0; 3];
         for d in 0..min.len() {
@@ -69,6 +69,9 @@ fn test_data() -> (
     let mut res2 = Vec::<(usize, usize)>::with_capacity(80);
     intersect_brute_force(&boxes, &boxes2, &mut res2);
 
+    assert_ne!(res.len(), 0);
+    assert_ne!(res2.len(), 0);
+
     (boxes, boxes2, res, res2)
 }
 
@@ -98,10 +101,11 @@ fn simulated_one_way_scan() {
 
 #[test]
 fn two_way_scan() {
-    let (mut boxes, boxes2, _boxes_self, boxes_boxes2) = test_data();
+    let (mut boxes, mut boxes2, _boxes_self, boxes_boxes2) = test_data();
 
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
     boxes.sort();
+    boxes2.sort();
     crate::internals::two_way_scan(&boxes, &boxes2, &mut res);
 
     assert!(same(&boxes_boxes2, &res));

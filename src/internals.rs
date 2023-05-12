@@ -4,18 +4,18 @@
 use crate::boxes::BBox;
 use crate::set::BBoxSet;
 use crate::{HasInfinity, Rng};
-
+use crate::ImplKind;
 /// Reports intersections between `intervals` and `points` by scanning in dimension 0,
 /// treating boxes in `points` as points: intersections are only reported when the low
 /// endpoint in dimension 0 of a box in `points` is inside the projection of a box in `intervals`.
 /// * `intervals` and `points` must be sorted before calling
 /// * `max_dim_check`: highest dimension that should be checked for intersection
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
-pub fn one_way_scan<B, ID>(
+pub fn one_way_scan<'a, B, ID>(
     intervals: &BBoxSet<B, ID>,
     points: &BBoxSet<B, ID>,
     max_dim_check: usize,
-    out: &mut Vec<(usize, usize)>,
+    mut out:  ImplKind<'a, ID>,
 ) where
     B: BBox,
     ID: Copy + PartialOrd,
@@ -62,7 +62,11 @@ pub fn one_way_scan<B, ID>(
                 continue 'points;
             }
 
-            out.push((i_idx, p_idx));
+            match out{
+                    ImplKind::Index(ref mut  out) => {out.push((i_idx, p_idx));}
+                    ImplKind::Ident( ref mut  out) => {out.push((i_id, p_id));}
+                    ImplKind::Both( ref mut out) => {out.push(((p_idx, p_min_idx),(i_id, p_id)));}
+                }
         }
     }
 }
@@ -79,14 +83,14 @@ pub fn simulated_one_way_scan<B, ID>(
     ID: Copy + PartialOrd,
     B::Num: PartialOrd,
 {
-    _two_way_scan::<B, ID, true>(intervals, points, max_dim_check, out);
+    _two_way_scan::<B, ID, true>(intervals, points, max_dim_check, ImplKind::Index(out));
 }
 
 /// Reports intersections between boxes in `a` and `b` by scanning in dimension 0, treating each
 /// as intervals and points in turn, as if [`one_way_scan`] was called twice, once with intervals and points switched
 /// * `a` and `b` must be distinct [`BBoxSet`]s and must be sorted before calling.
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
-pub fn two_way_scan<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(usize, usize)>)
+pub fn two_way_scan<'a, B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>,  out: ImplKind<'a, ID>)
 where
     B: BBox,
     ID: Copy,
@@ -96,11 +100,11 @@ where
     _two_way_scan::<B, ID, false>(a, b, B::DIM - 1, out);
 }
 
-fn _two_way_scan<B, ID, const SIMULATE_ONE_WAY: bool>(
+fn _two_way_scan<'a, B, ID, const SIMULATE_ONE_WAY: bool>(
     intervals: &BBoxSet<B, ID>,
     points: &BBoxSet<B, ID>,
     max_dim_check: usize,
-    out: &mut Vec<(usize, usize)>,
+    mut out: ImplKind<'a, ID>,
 ) where
     B: BBox,
     ID: Copy + PartialOrd,
@@ -137,9 +141,13 @@ fn _two_way_scan<B, ID, const SIMULATE_ONE_WAY: bool>(
                 {
                     continue 'points;
                 }
-
+                match out{
+                    ImplKind::Index(ref mut out) => {out.push((p_idx, i_min_idx));}
+                    ImplKind::Ident(ref mut out) => {out.push((p_min_id, p_id));}
+                    ImplKind::Both(ref mut out) => {out.push(((p_idx, i_min_idx),(p_min_id, p_id)));}
+                }
                 //out.push((p_id, i_min_id));
-                out.push((p_idx, i_min_idx));
+
             }
 
             i_min_idx += 1;
@@ -168,8 +176,13 @@ fn _two_way_scan<B, ID, const SIMULATE_ONE_WAY: bool>(
                     continue 'intervals;
                 }
 
-//                out.push((p_min_id, i_id));
-                out.push((p_min_idx, i_idx));
+              match out{
+                ImplKind::Index(ref mut out) => {out.push((p_min_idx, i_idx));}
+                ImplKind::Ident(ref mut out) => {out.push((p_min_id, i_id));}
+                ImplKind::Both(ref mut out) => {out.push(((p_min_idx, i_idx),(p_min_id,  i_id)));}
+            }
+
+
             }
 
             p_min_idx += 1;
@@ -185,13 +198,13 @@ fn _two_way_scan<B, ID, const SIMULATE_ONE_WAY: bool>(
 /// * [`lo`, `hi`) is the segment belonging to this node of the streamed segment tree
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
 pub fn hybrid<B, ID, R, const CUTOFF: usize>(
-    intervals: &BBoxSet<B, ID>,
-    points: &BBoxSet<B, ID>,
-    lo: B::Num,
-    hi: B::Num,
-    dim: usize,
-    out: &mut Vec<(ID, ID)>,
-    rand: &mut R,
+    _intervals: &BBoxSet<B, ID>,
+    _points: &BBoxSet<B, ID>,
+    _lo: B::Num,
+    _hi: B::Num,
+    _dim: usize,
+    _out: &mut Vec<(ID, ID)>,
+    _rand: &mut R,
 ) where
     B: BBox,
     ID: PartialOrd + Copy,

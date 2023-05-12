@@ -114,24 +114,50 @@ pub fn intersect_ze_custom<B, ID, R, const CUTOFF: usize>(
 /// Should perform reasonably up to approximately 1,000 boxes
 /// * `a` and `b` may be either the same or distinct [`BBoxSet`]s and must be sorted before calling.
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
-pub fn intersect_scan<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(usize, usize)>)
+pub fn intersect_scan<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(ID, ID)>)
 where
     B: BBox,
     ID: Copy + PartialOrd,
 {
-    let same = a as *const _ == b as *const _; // check if a and b refer to the same BBoxSet
-    if same {
-        one_way_scan(a, b, B::DIM - 1, out);
-    } else {
-        two_way_scan(a, b, out);
-    }
+     the_way(a, b, ImplKind::Ident(out));
 }
+
+pub fn intersect_scan_idx<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(usize, usize)>)
+where
+    B: BBox,
+    ID: Copy + PartialOrd
+{
+  the_way(a, b, ImplKind::Index(out));
+}
+
+fn the_way<'a, B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: ImplKind<'a, ID>)
+where
+    B: BBox,
+    ID: Copy + PartialOrd
+{
+    let same = a as *const _ == b as *const _;
+    // check if a and b refer to the same BBoxSet
+        match same{
+        true=> { one_way_scan(a, b, B::DIM - 1, out);}
+        false => {two_way_scan(a, b, out);}
+
+    }
+
+}
+
+pub enum ImplKind<'a, ID>{
+    Index(&'a mut Vec<(usize, usize)>),
+    Ident(&'a mut Vec<(ID, ID)>),
+    Both(&'a mut Vec<((usize, usize), (ID,ID))>)
+}
+
+
 
 /// Finds box intersections by checking every box in `a` against every box in `b`.
 /// Performs well for on the order of 100 boxes. *O*(*n^2*)
 /// * `a` and `b` may be either the same or distinct [`BBoxSet`]s
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
-pub fn intersect_brute_force<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(ID, ID)>)
+pub fn intersect_brute_force<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(usize, usize)>)
 where
     B: BBox,
     ID: Copy,
@@ -140,20 +166,20 @@ where
     if same {
         // avoid duplicate intersections
         let mut start = 1;
-        for &(bbox, id) in &a.boxes {
-            for idx in start..a.boxes.len() {
-                let (bbox2, id2) = a.boxes[idx];
+        for (aidx, &(bbox, id)) in a.boxes.iter().enumerate() {
+            for aidx in start..a.boxes.len() {
+                let (bbox2, id2) = a.boxes[aidx];
                 if bbox.intersects(&bbox2) {
-                    out.push((id, id2));
+                    out.push((aidx, aidx));
                 }
             }
             start += 1;
         }
     } else {
-        for &(bbox, id) in &a.boxes {
-            for &(bbox2, id2) in &b.boxes {
+        for (aidx, &(bbox, id)) in a.boxes.iter().enumerate() {
+            for (bidx, &(bbox2, id2)) in b.boxes.iter().enumerate()  {
                 if bbox.intersects(&bbox2) {
-                    out.push((id, id2));
+                    out.push((aidx, bidx));
                 }
             }
         }

@@ -83,7 +83,7 @@ fn one_way_scan() {
 
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
     boxes.sort();
-    crate::internals::one_way_scan(&boxes, &boxes, 2, &mut res);
+    crate::internals::one_way_scan(&boxes, &boxes, 2, crate::AnswerFormat::Ident(&mut res));
 
     assert!(same(&boxes_self, &res));
 }
@@ -94,7 +94,7 @@ fn simulated_one_way_scan() {
 
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
     boxes.sort();
-    crate::internals::simulated_one_way_scan(&boxes, &boxes, 2, &mut res);
+    crate::internals::simulated_one_way_scan(&boxes, &boxes, 2, crate::AnswerFormat::Ident(&mut res));
 
     assert!(same(&boxes_self, &res));
 }
@@ -106,7 +106,7 @@ fn two_way_scan() {
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
     boxes.sort();
     boxes2.sort();
-    crate::internals::two_way_scan(&boxes, &boxes2, &mut res);
+    crate::internals::two_way_scan(&boxes, &boxes2, crate::AnswerFormat::Ident(&mut res));
 
     assert!(same(&boxes_boxes2, &res));
 }

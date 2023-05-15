@@ -11,6 +11,7 @@ categories = ["game-development"]
 
 [dependencies]
 rand = { version = "0.8.3", optional = true }
+reborrow = {version="0.5.4", features=["derive", "reborrow-derive"]}
 
 [features]
 default = ["rand-crate"]

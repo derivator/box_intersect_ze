@@ -22,3 +22,4 @@ required-features = ["rand-crate"]
 
 [dev-dependencies]
 rand_chacha = "0.3.0"
+once_cell = "1.17.1"

@@ -1,35 +1,30 @@
 use crate::boxes::Box3Df32;
 use crate::intersect_brute_force;
 use crate::set::BBoxSet;
+use once_cell::sync::Lazy;
 use rand::{Rng as OtherRng, SeedableRng};
 use std::fmt::Debug;
 
-fn same<ID: Eq + Copy + Debug>(a: &Vec<(ID, ID)>, b: &Vec<(ID, ID)>) -> bool {
-    let (long, short, short_name) = if a.len() > b.len() {
-        (a, b, "second")
-    } else {
-        (b, a, "first")
-    };
-
+fn same<ID: Eq + Copy + Debug>(correct: &Vec<(ID, ID)>, actual: &Vec<(ID, ID)>) -> bool {
     let mut missing = false;
-    for el in long {
-        if !(short.contains(el) || short.contains(&(el.1, el.0))) {
-            println!("Missing in {}: {:?}", short_name, el);
+    for el in correct {
+        if !(actual.contains(el) || actual.contains(&(el.1, el.0))) {
+            println!("Missing element: {:?}", el);
             missing = true;
         }
     }
 
-    if a.len() != b.len() {
-        for el in short {
-            if !(long.contains(el) || long.contains(&(el.1, el.0))) {
-                println!("Missing in long: {:?}", el);
+    if correct.len() != actual.len() {
+        for el in actual {
+            if !(correct.contains(el) || correct.contains(&(el.1, el.0))) {
+                println!("Incorrect element: {:?}", el);
                 missing = true;
             }
         }
-        println!("First: {}, second: {}", a.len(), b.len());
+        println!("Correct: {}, observed: {}", correct.len(), actual.len());
     }
 
-    a.len() == b.len() && !missing
+    correct.len() == actual.len() && !missing
 }
 
 fn random_boxes(n: usize, start: usize, seed: u64) -> BBoxSet<Box3Df32, usize> {
@@ -52,75 +47,75 @@ fn random_boxes(n: usize, start: usize, seed: u64) -> BBoxSet<Box3Df32, usize> {
     }
     set
 }
+struct TestData {
+    boxes1: BBoxSet<Box3Df32, usize>,
+    boxes2: BBoxSet<Box3Df32, usize>,
+    complete: Vec<(usize, usize)>,
+    bipartite: Vec<(usize, usize)>,
+}
 
+static TEST_DATA: Lazy<TestData> = Lazy::new(|| test_data());
 /// Generates some random boxes and finds their intersections using brute force, as a reference to validate against
-fn test_data() -> (
-    BBoxSet<Box3Df32, usize>,
-    BBoxSet<Box3Df32, usize>,
-    Vec<(usize, usize)>,
-    Vec<(usize, usize)>,
-) {
-    let boxes = random_boxes(150, 0, 12345);
-    let boxes2 = random_boxes(150, boxes.len(), 54321);
+fn test_data() -> TestData {
+    let mut boxes1 = random_boxes(150, 0, 12345);
+    let mut boxes2 = random_boxes(150, boxes1.len(), 54321);
+    boxes1.sort();
+    boxes2.sort();
 
-    let mut res = Vec::<(usize, usize)>::with_capacity(80);
-    intersect_brute_force(&boxes, &boxes, &mut res);
+    let mut complete = Vec::<(usize, usize)>::with_capacity(80);
+    intersect_brute_force(&boxes1, &boxes1, &mut complete);
 
-    let mut res2 = Vec::<(usize, usize)>::with_capacity(80);
-    intersect_brute_force(&boxes, &boxes2, &mut res2);
+    let mut bipartite = Vec::<(usize, usize)>::with_capacity(80);
+    intersect_brute_force(&boxes1, &boxes2, &mut bipartite);
 
-    assert_ne!(res.len(), 0);
-    assert_ne!(res2.len(), 0);
+    assert_ne!(complete.len(), 0);
+    assert_ne!(bipartite.len(), 0);
 
-    (boxes, boxes2, res, res2)
+    TestData {
+        boxes1,
+        boxes2,
+        complete,
+        bipartite,
+    }
 }
 
 // Validate the different algorithms against the brute force solution
 
 #[test]
 fn one_way_scan() {
-    let (mut boxes, _boxes2, boxes_self, _boxes_boxes2) = test_data();
-
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
-    boxes.sort();
-    crate::internals::one_way_scan(&boxes, &boxes, 2, &mut res);
+    crate::internals::one_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes1, 2, &mut res);
 
-    assert!(same(&boxes_self, &res));
+    assert!(same(&TEST_DATA.complete, &res));
 }
 
 #[test]
 fn simulated_one_way_scan() {
-    let (mut boxes, _boxes2, boxes_self, _boxes_boxes2) = test_data();
-
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
-    boxes.sort();
-    crate::internals::simulated_one_way_scan(&boxes, &boxes, 2, &mut res);
+    crate::internals::simulated_one_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes1, 2, &mut res);
 
-    assert!(same(&boxes_self, &res));
+    assert!(same(&TEST_DATA.complete, &res));
 }
 
 #[test]
 fn two_way_scan() {
-    let (mut boxes, mut boxes2, _boxes_self, boxes_boxes2) = test_data();
-
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
-    boxes.sort();
-    boxes2.sort();
-    crate::internals::two_way_scan(&boxes, &boxes2, &mut res);
+    crate::internals::two_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes2, &mut res);
 
-    assert!(same(&boxes_boxes2, &res));
+    assert!(same(&TEST_DATA.bipartite, &res));
 }
 
 #[test]
 fn box_intersect() {
-    let (mut boxes, mut boxes2, boxes_self, boxes_boxes2) = test_data();
-
-    let mut res = Vec::<(usize, usize)>::with_capacity(boxes.len());
+    let mut res = Vec::<(usize, usize)>::with_capacity(TEST_DATA.complete.len());
     let mut r = rand_chacha::ChaCha8Rng::seed_from_u64(12345);
 
-    boxes.sort();
-    boxes2.sort();
-    crate::intersect_ze_custom::<_, _, _, 5>(&boxes, &boxes, &mut res, &mut r);
+    crate::intersect_ze_custom::<_, _, _, 5>(
+        &TEST_DATA.boxes1,
+        &TEST_DATA.boxes1,
+        &mut res,
+        &mut r,
+    );
 
     for &(id1, id2) in &res {
         if res.contains(&(id2, id1)) {
@@ -136,10 +131,15 @@ fn box_intersect() {
         }
     }
 
-    assert!(same(&boxes_self, &res));
+    assert!(same(&TEST_DATA.complete, &res));
 
-    let mut res = Vec::<(usize, usize)>::with_capacity(boxes.len());
-    crate::intersect_ze_custom::<_, _, _, 5>(&boxes, &boxes2, &mut res, &mut r);
+    let mut res = Vec::<(usize, usize)>::with_capacity(TEST_DATA.bipartite.len());
+    crate::intersect_ze_custom::<_, _, _, 5>(
+        &TEST_DATA.boxes1,
+        &TEST_DATA.boxes2,
+        &mut res,
+        &mut r,
+    );
 
-    assert!(same(&boxes_boxes2, &res));
+    assert!(same(&TEST_DATA.bipartite, &res));
 }

@@ -25,8 +25,8 @@
 //! let mut result = Vec::with_capacity(2); // set capacity according to expected number of intersections to avoid resizing
 //! box_intersect_ze::intersect_ze(&boxes, &boxes, &mut result, &mut ChaCha8Rng::seed_from_u64(1234)); // get the intersections
 //!
-//! assert!(result.contains(&(1,0)));
-//! assert!(result.contains(&(2,1)));
+//! assert!(result.contains(&(0,1)));
+//! assert!(result.contains(&(1,2)));
 //! assert!(!result.contains(&(2,0)));
 //! assert!(!result.contains(&(0,2)));
 //! ```
@@ -203,7 +203,7 @@ where
         let mut start = 1;
         for (aidx, &(bbox, id)) in a.boxes.iter().enumerate() {
             for bidx in start..a.boxes.len() {
-                let (bbox2, id2) = a.boxes[aidx];
+                let (bbox2, id2) = a.boxes[bidx];
                 if bbox.intersects(&bbox2) {
                     match out{
                         AnswerFormat::Index(ref mut out)=>out.push((aidx, bidx)),

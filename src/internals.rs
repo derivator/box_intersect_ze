@@ -150,8 +150,8 @@ fn _two_way_scan<'a, B, ID, const SIMULATE_ONE_WAY: bool>(
                 }
                 match out{
                     AnswerFormat::Index(ref mut out) => {out.push((p_idx, i_min_idx));}
-                    AnswerFormat::Ident(ref mut out) => {out.push((p_min_id, p_id));}
-                    AnswerFormat::Both(ref mut out) => {out.push(((p_idx, i_min_idx),(p_min_id, p_id)));}
+                    AnswerFormat::Ident(ref mut out) => {out.push((i_min_id, p_id));}
+                    AnswerFormat::Both(ref mut out) => {out.push(((p_idx, i_min_idx),(i_min_id, p_id)));}
                 }
                 //out.push((p_id, i_min_id));
 

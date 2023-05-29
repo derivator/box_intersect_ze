@@ -115,6 +115,13 @@ fn _two_way_scan<'a, B, ID, const SIMULATE_ONE_WAY: bool>(
     let mut p_min_idx = 0;
     let p_len = points.len();
 
+    // exclusive upper bound of dimensions to be checked for intersection
+    let dim_range_upper = if SIMULATE_ONE_WAY {
+        max_dim_check // simulated one way scan employs a stricter check than just intersection for the highest dimension
+    } else {
+        max_dim_check + 1
+    };
+
     while i_min_idx < i_len && p_min_idx < p_len {
         let (i_min, i_min_id) = intervals.get(i_min_idx);
         let (p_min, p_min_id) = points.get(p_min_idx);
@@ -129,7 +136,7 @@ fn _two_way_scan<'a, B, ID, const SIMULATE_ONE_WAY: bool>(
                     continue 'points;
                 }
 
-                for dim in 1..max_dim_check {
+                for dim in 1..dim_range_upper {
                     if !p.intersects_in(dim, i_min.lo(dim), i_min.hi(dim)) {
                         continue 'points;
                     }
@@ -163,7 +170,7 @@ fn _two_way_scan<'a, B, ID, const SIMULATE_ONE_WAY: bool>(
                     continue 'intervals;
                 }
 
-                for dim in 1..max_dim_check {
+                for dim in 1..dim_range_upper {
                     if !i.intersects_in(dim, p_min.lo(dim), p_min.hi(dim)) {
                         continue 'intervals;
                     }

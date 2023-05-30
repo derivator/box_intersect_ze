@@ -55,7 +55,7 @@ struct TestData {
 }
 
 static TEST_DATA: Lazy<TestData> = Lazy::new(|| test_data());
-const N:usize = 10;
+const N:usize = 1234;
 /// Generates some random boxes and finds their intersections using brute force, as a reference to validate against
 fn test_data() -> TestData {
     let mut boxes1 = random_boxes(N, 0, 12345);
@@ -66,10 +66,8 @@ fn test_data() -> TestData {
     let mut complete = Vec::<(usize, usize)>::with_capacity(80);
     intersect_brute_force(&boxes1, &boxes1, &mut complete);
 
-    println!("complete correct {:?}", &complete);
     let mut bipartite = Vec::<(usize, usize)>::with_capacity(80);
     intersect_brute_force(&boxes1, &boxes2, &mut bipartite);
-    println!("bipartitie correct {:?}", &bipartite);
 
     assert_ne!(complete.len(), 0);
     assert_ne!(bipartite.len(), 0);

@@ -25,8 +25,8 @@
 //! let mut result = Vec::with_capacity(2); // set capacity according to expected number of intersections to avoid resizing
 //! box_intersect_ze::intersect_ze(&boxes, &boxes, &mut result, &mut ChaCha8Rng::seed_from_u64(1234)); // get the intersections
 //!
-//! assert!(result.contains(&(1,0)));
-//! assert!(result.contains(&(2,1)));
+//! assert!(result.contains(&(0,1)));
+//! assert!(result.contains(&(1,2)));
 //! assert!(!result.contains(&(2,0)));
 //! assert!(!result.contains(&(0,2)));
 //! ```
@@ -119,11 +119,53 @@ where
     B: BBox,
     ID: Copy + PartialOrd,
 {
-    let same = a as *const _ == b as *const _; // check if a and b refer to the same BBoxSet
-    if same {
-        one_way_scan(a, b, B::DIM - 1, out);
-    } else {
-        two_way_scan(a, b, out);
+    intersect_scan_flex(a, b, AnswerFormat::Ident(out));
+}
+
+pub fn intersect_scan_idx<B, ID>(
+    a: &BBoxSet<B, ID>,
+    b: &BBoxSet<B, ID>,
+    out: &mut Vec<(usize, usize)>,
+) where
+    B: BBox,
+    ID: Copy + PartialOrd,
+{
+    intersect_scan_flex(a, b, AnswerFormat::Index(out));
+}
+
+fn intersect_scan_flex<'a, B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: AnswerFormat<'a, ID>)
+where
+    B: BBox,
+    ID: Copy + PartialOrd,
+{
+    let same = a as *const _ == b as *const _;
+    // check if a and b refer to the same BBoxSet
+    match same {
+        true => {
+            one_way_scan(a, b, B::DIM - 1, out);
+        }
+        false => {
+            two_way_scan(a, b, out);
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum AnswerFormat<'a, ID> {
+    Index(&'a mut Vec<(usize, usize)>),
+    Ident(&'a mut Vec<(ID, ID)>),
+    Both(&'a mut Vec<((usize, usize), (ID, ID))>),
+}
+
+// Allow AnswerFormat to be reborrowed (see reborrow crate for why this is useful)
+impl<'__reborrow_lifetime, 'a, ID> AnswerFormat<'a, ID> {
+    #[inline]
+    pub fn reborrow(&'__reborrow_lifetime mut self) -> AnswerFormat<'__reborrow_lifetime, ID> {
+        match self {
+            AnswerFormat::Index(ref mut s) => AnswerFormat::<'__reborrow_lifetime>::Index(s),
+            AnswerFormat::Ident(ref mut s) => AnswerFormat::<'__reborrow_lifetime>::Ident(s),
+            AnswerFormat::Both(ref mut s) => AnswerFormat::<'__reborrow_lifetime>::Both(s),
+        }
     }
 }
 
@@ -136,24 +178,58 @@ where
     B: BBox,
     ID: Copy,
 {
+    intersect_brute_force_flex(a, b, AnswerFormat::Ident(out));
+}
+
+/// Finds box intersections by checking every box in `a` against every box in `b`.
+/// Performs well for on the order of 100 boxes. *O*(*n^2*)
+/// * `a` and `b` may be either the same or distinct [`BBoxSet`]s
+/// * `out` will contain pairs of `ID`s of intersecting boxes.
+pub fn intersect_brute_force_idx<B, ID>(
+    a: &BBoxSet<B, ID>,
+    b: &BBoxSet<B, ID>,
+    out: &mut Vec<(usize, usize)>,
+) where
+    B: BBox,
+    ID: Copy,
+{
+    intersect_brute_force_flex(a, b, AnswerFormat::Index(out));
+}
+
+pub fn intersect_brute_force_flex<'a, B, ID>(
+    a: &BBoxSet<B, ID>,
+    b: &BBoxSet<B, ID>,
+    mut out: AnswerFormat<'a, ID>,
+) where
+    B: BBox,
+    ID: Copy,
+{
     let same = a as *const _ == b as *const _; // check if a and b refer to the same BBoxSet
     if same {
         // avoid duplicate intersections
         let mut start = 1;
-        for &(bbox, id) in &a.boxes {
-            for idx in start..a.boxes.len() {
-                let (bbox2, id2) = a.boxes[idx];
+        for (aidx, &(bbox, id)) in a.boxes.iter().enumerate() {
+            for bidx in start..a.boxes.len() {
+                let (bbox2, id2) = a.boxes[bidx];
                 if bbox.intersects(&bbox2) {
-                    out.push((id, id2));
+                    match out {
+                        AnswerFormat::Index(ref mut out) => out.push((aidx, bidx)),
+                        AnswerFormat::Ident(ref mut out) => out.push((id, id2)),
+                        AnswerFormat::Both(ref mut out) => out.push(((aidx, bidx), (id, id2))),
+                    }
                 }
             }
             start += 1;
         }
     } else {
-        for &(bbox, id) in &a.boxes {
-            for &(bbox2, id2) in &b.boxes {
+        for (aidx, &(bbox, id)) in a.boxes.iter().enumerate() {
+            for (bidx, &(bbox2, id2)) in b.boxes.iter().enumerate() {
                 if bbox.intersects(&bbox2) {
-                    out.push((id, id2));
+                    match out {
+                        AnswerFormat::Index(ref mut out) => out.push((aidx, bidx)),
+                        AnswerFormat::Ident(ref mut out) => out.push((id, id2)),
+                        AnswerFormat::Both(ref mut out) => out.push(((aidx, bidx), (id, id2))),
+                    }
                 }
             }
         }

@@ -55,10 +55,11 @@ struct TestData {
 }
 
 static TEST_DATA: Lazy<TestData> = Lazy::new(|| test_data());
+const N:usize = 1234;
 /// Generates some random boxes and finds their intersections using brute force, as a reference to validate against
 fn test_data() -> TestData {
-    let mut boxes1 = random_boxes(150, 0, 12345);
-    let mut boxes2 = random_boxes(150, boxes1.len(), 54321);
+    let mut boxes1 = random_boxes(N, 0, 12345);
+    let mut boxes2 = random_boxes(N, boxes1.len(), 54321);
     boxes1.sort();
     boxes2.sort();
 
@@ -84,15 +85,14 @@ fn test_data() -> TestData {
 #[test]
 fn one_way_scan() {
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
-    crate::internals::one_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes1, 2, &mut res);
-
+    crate::internals::one_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes1, 2, crate::AnswerFormat::Ident(&mut res));
     assert!(same(&TEST_DATA.complete, &res));
 }
 
 #[test]
 fn simulated_one_way_scan() {
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
-    crate::internals::simulated_one_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes1, 2, &mut res);
+    crate::internals::simulated_one_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes1, 2, crate::AnswerFormat::Ident(&mut res));
 
     assert!(same(&TEST_DATA.complete, &res));
 }
@@ -100,7 +100,7 @@ fn simulated_one_way_scan() {
 #[test]
 fn two_way_scan() {
     let mut res = Vec::<(usize, usize)>::with_capacity(80);
-    crate::internals::two_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes2, &mut res);
+    crate::internals::two_way_scan(&TEST_DATA.boxes1, &TEST_DATA.boxes2, crate::AnswerFormat::Ident(&mut res));
 
     assert!(same(&TEST_DATA.bipartite, &res));
 }

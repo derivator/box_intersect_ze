@@ -184,7 +184,7 @@ fn _two_way_scan<'a, B, ID, const SIMULATE_ONE_WAY: bool>(
                 }
 
               match out{
-                AnswerFormat::Index(ref mut out) => {out.push((p_min_idx, i_idx));}
+                AnswerFormat::Index(ref mut out) => {out.push((i_idx, p_min_idx));}
                 AnswerFormat::Ident(ref mut out) => {out.push((p_min_id, i_id));}
                 AnswerFormat::Both(ref mut out) => {out.push(((p_min_idx, i_idx),(p_min_id,  i_id)));}
             }

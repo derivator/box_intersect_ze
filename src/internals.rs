@@ -3,8 +3,8 @@
 
 use crate::boxes::BBox;
 use crate::set::BBoxSet;
-use crate::{HasInfinity, Rng};
 use crate::AnswerFormat;
+use crate::{HasInfinity, Rng};
 /// Reports intersections between `intervals` and `points` by scanning in dimension 0,
 /// treating boxes in `points` as points: intersections are only reported when the low
 /// endpoint in dimension 0 of a box in `points` is inside the projection of a box in `intervals`.
@@ -15,7 +15,7 @@ pub fn one_way_scan<'a, B, ID>(
     intervals: &BBoxSet<B, ID>,
     points: &BBoxSet<B, ID>,
     max_dim_check: usize,
-    mut out:  AnswerFormat<'a, ID>,
+    mut out: AnswerFormat<'a, ID>,
 ) where
     B: BBox,
     ID: Copy + PartialOrd,
@@ -62,11 +62,17 @@ pub fn one_way_scan<'a, B, ID>(
                 continue 'points;
             }
 
-            match out{
-                    AnswerFormat::Index(ref mut  out) => {out.push((i_idx, p_idx));}
-                    AnswerFormat::Ident( ref mut  out) => {out.push((i_id, p_id));}
-                    AnswerFormat::Both( ref mut out) => {out.push(((p_idx, p_min_idx),(i_id, p_id)));}
+            match out {
+                AnswerFormat::Index(ref mut out) => {
+                    out.push((i_idx, p_idx));
                 }
+                AnswerFormat::Ident(ref mut out) => {
+                    out.push((i_id, p_id));
+                }
+                AnswerFormat::Both(ref mut out) => {
+                    out.push(((p_idx, p_min_idx), (i_id, p_id)));
+                }
+            }
         }
     }
 }
@@ -90,7 +96,7 @@ pub fn simulated_one_way_scan<'a, B, ID>(
 /// as intervals and points in turn, as if [`one_way_scan`] was called twice, once with intervals and points switched
 /// * `a` and `b` must be distinct [`BBoxSet`]s and must be sorted before calling.
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
-pub fn two_way_scan<'a, B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>,  out: AnswerFormat<'a, ID>)
+pub fn two_way_scan<'a, B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: AnswerFormat<'a, ID>)
 where
     B: BBox,
     ID: Copy,
@@ -148,13 +154,18 @@ fn _two_way_scan<'a, B, ID, const SIMULATE_ONE_WAY: bool>(
                 {
                     continue 'points;
                 }
-                match out{
-                    AnswerFormat::Index(ref mut out) => {out.push((p_idx, i_min_idx));}
-                    AnswerFormat::Ident(ref mut out) => {out.push((i_min_id, p_id));}
-                    AnswerFormat::Both(ref mut out) => {out.push(((p_idx, i_min_idx),(i_min_id, p_id)));}
+                match out {
+                    AnswerFormat::Index(ref mut out) => {
+                        out.push((i_min_idx, p_idx));
+                    }
+                    AnswerFormat::Ident(ref mut out) => {
+                        out.push((i_min_id, p_id));
+                    }
+                    AnswerFormat::Both(ref mut out) => {
+                        out.push(((i_min_idx, p_idx), (i_min_id, p_id)));
+                    }
                 }
                 //out.push((p_id, i_min_id));
-
             }
 
             i_min_idx += 1;
@@ -183,15 +194,18 @@ fn _two_way_scan<'a, B, ID, const SIMULATE_ONE_WAY: bool>(
                     continue 'intervals;
                 }
 
-              match out{
-                AnswerFormat::Index(ref mut out) => {out.push((i_idx, p_min_idx));}
-                AnswerFormat::Ident(ref mut out) => {out.push((p_min_id, i_id));}
-                AnswerFormat::Both(ref mut out) => {out.push(((p_min_idx, i_idx),(p_min_id,  i_id)));}
+                match out {
+                    AnswerFormat::Index(ref mut out) => {
+                        out.push((i_idx, p_min_idx));
+                    }
+                    AnswerFormat::Ident(ref mut out) => {
+                        out.push((i_id, p_min_id));
+                    }
+                    AnswerFormat::Both(ref mut out) => {
+                        out.push(((i_idx, p_min_idx), (p_min_id, i_id)));
+                    }
+                }
             }
-
-
-            }
-
             p_min_idx += 1;
         }
     }
@@ -218,7 +232,15 @@ pub fn hybrid<B, ID, R, const CUTOFF: usize>(
     B::Num: PartialOrd + HasInfinity,
     R: Rng,
 {
-    hybrid_flex::<B,ID,R,CUTOFF>(intervals,points,lo, hi,dim, AnswerFormat::Ident(out), rand);
+    hybrid_flex::<B, ID, R, CUTOFF>(
+        intervals,
+        points,
+        lo,
+        hi,
+        dim,
+        AnswerFormat::Ident(out),
+        rand,
+    );
 }
 
 pub fn hybrid_flex<'a, B, ID, R, const CUTOFF: usize>(
@@ -230,10 +252,10 @@ pub fn hybrid_flex<'a, B, ID, R, const CUTOFF: usize>(
     mut out: AnswerFormat<'a, ID>,
     rand: &mut R,
 ) where
-B: BBox,
-ID: PartialOrd + Copy,
-B::Num: PartialOrd + HasInfinity,
-R: Rng,
+    B: BBox,
+    ID: PartialOrd + Copy,
+    B::Num: PartialOrd + HasInfinity,
+    R: Rng,
 {
     //use reborrow::ReborrowMut;
     //impl <'a, ID> Copy for AnswerFormat<'a, ID>{}
@@ -266,10 +288,25 @@ R: Rng,
 
     // Step 4: stream two segment trees in the next dimension for the intervals stored at this node
 
-    hybrid_flex::<B, ID, R, CUTOFF>(&intervals_m, points, ninfty, infty, dim - 1, out.reborrow(), rand);
+    hybrid_flex::<B, ID, R, CUTOFF>(
+        &intervals_m,
+        points,
+        ninfty,
+        infty,
+        dim - 1,
+        out.reborrow(),
+        rand,
+    );
 
-
-    hybrid_flex::<B, ID, R, CUTOFF>(points, &intervals_m, ninfty, infty, dim - 1, out.reborrow(), rand);
+    hybrid_flex::<B, ID, R, CUTOFF>(
+        points,
+        &intervals_m,
+        ninfty,
+        infty,
+        dim - 1,
+        out.reborrow(),
+        rand,
+    );
 
     // Step 5: divide the segment [lo, hi) into segments [lo, mi) and [mi, hi) by computing an approximate median
     let mi = points.approx_median(dim, rand);
@@ -301,5 +338,6 @@ R: Rng,
     }
 
     hybrid_flex::<B, ID, R, CUTOFF>(&intervals_l, &points_l, lo, mi, dim, out.reborrow(), rand); // Step 6: left subtree
-    hybrid_flex::<B, ID, R, CUTOFF>(&intervals_r, &points_r, mi, hi, dim, out.reborrow(), rand); // Step 7: right subtree
+    hybrid_flex::<B, ID, R, CUTOFF>(&intervals_r, &points_r, mi, hi, dim, out.reborrow(), rand);
+    // Step 7: right subtree
 }

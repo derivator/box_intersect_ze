@@ -119,54 +119,55 @@ where
     B: BBox,
     ID: Copy + PartialOrd,
 {
-     intersect_scan_flex(a, b, AnswerFormat::Ident(out));
+    intersect_scan_flex(a, b, AnswerFormat::Ident(out));
 }
 
-pub fn intersect_scan_idx<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(usize, usize)>)
-where
+pub fn intersect_scan_idx<B, ID>(
+    a: &BBoxSet<B, ID>,
+    b: &BBoxSet<B, ID>,
+    out: &mut Vec<(usize, usize)>,
+) where
     B: BBox,
-    ID: Copy + PartialOrd
+    ID: Copy + PartialOrd,
 {
-  intersect_scan_flex(a, b, AnswerFormat::Index(out));
+    intersect_scan_flex(a, b, AnswerFormat::Index(out));
 }
-
 
 fn intersect_scan_flex<'a, B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: AnswerFormat<'a, ID>)
 where
     B: BBox,
-    ID: Copy + PartialOrd
+    ID: Copy + PartialOrd,
 {
     let same = a as *const _ == b as *const _;
     // check if a and b refer to the same BBoxSet
-        match same{
-        true=> { one_way_scan(a, b, B::DIM - 1, out);}
-        false => {two_way_scan(a, b, out);}
-
-    }
-}
-
-
-#[derive(Debug)]
-pub enum AnswerFormat<'a, ID>{
-    Index(&'a mut Vec<(usize, usize)>),
-    Ident(&'a mut Vec<(ID, ID)>),
-    Both(&'a mut Vec<((usize, usize), (ID,ID))>)
-}
-
-
-// Allow AnswerFormat to be reborrowed (see reborrow crate for why this is useful)
-impl<'__reborrow_lifetime, 'a, ID> AnswerFormat<'a, ID>
-{
-    #[inline]
-    pub fn reborrow(&'__reborrow_lifetime mut self) -> AnswerFormat<'__reborrow_lifetime, ID> {
-        match self{
-            AnswerFormat::Index(ref mut s)=> AnswerFormat::<'__reborrow_lifetime>::Index(s),
-            AnswerFormat::Ident(ref mut s)=> AnswerFormat::<'__reborrow_lifetime>::Ident(s),
-            AnswerFormat::Both(ref mut s)=> AnswerFormat::<'__reborrow_lifetime>::Both(s),
+    match same {
+        true => {
+            one_way_scan(a, b, B::DIM - 1, out);
+        }
+        false => {
+            two_way_scan(a, b, out);
         }
     }
 }
 
+#[derive(Debug)]
+pub enum AnswerFormat<'a, ID> {
+    Index(&'a mut Vec<(usize, usize)>),
+    Ident(&'a mut Vec<(ID, ID)>),
+    Both(&'a mut Vec<((usize, usize), (ID, ID))>),
+}
+
+// Allow AnswerFormat to be reborrowed (see reborrow crate for why this is useful)
+impl<'__reborrow_lifetime, 'a, ID> AnswerFormat<'a, ID> {
+    #[inline]
+    pub fn reborrow(&'__reborrow_lifetime mut self) -> AnswerFormat<'__reborrow_lifetime, ID> {
+        match self {
+            AnswerFormat::Index(ref mut s) => AnswerFormat::<'__reborrow_lifetime>::Index(s),
+            AnswerFormat::Ident(ref mut s) => AnswerFormat::<'__reborrow_lifetime>::Ident(s),
+            AnswerFormat::Both(ref mut s) => AnswerFormat::<'__reborrow_lifetime>::Both(s),
+        }
+    }
+}
 
 /// Finds box intersections by checking every box in `a` against every box in `b`.
 /// Performs well for on the order of 100 boxes. *O*(*n^2*)
@@ -174,8 +175,8 @@ impl<'__reborrow_lifetime, 'a, ID> AnswerFormat<'a, ID>
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
 pub fn intersect_brute_force<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(ID, ID)>)
 where
-B: BBox,
-ID: Copy,
+    B: BBox,
+    ID: Copy,
 {
     intersect_brute_force_flex(a, b, AnswerFormat::Ident(out));
 }
@@ -184,16 +185,22 @@ ID: Copy,
 /// Performs well for on the order of 100 boxes. *O*(*n^2*)
 /// * `a` and `b` may be either the same or distinct [`BBoxSet`]s
 /// * `out` will contain pairs of `ID`s of intersecting boxes.
-pub fn intersect_brute_force_idx<B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, out: &mut Vec<(usize, usize)>)
-where
-B: BBox,
-ID: Copy,
+pub fn intersect_brute_force_idx<B, ID>(
+    a: &BBoxSet<B, ID>,
+    b: &BBoxSet<B, ID>,
+    out: &mut Vec<(usize, usize)>,
+) where
+    B: BBox,
+    ID: Copy,
 {
     intersect_brute_force_flex(a, b, AnswerFormat::Index(out));
 }
 
-pub fn intersect_brute_force_flex<'a, B, ID>(a: &BBoxSet<B, ID>, b: &BBoxSet<B, ID>, mut out: AnswerFormat<'a, ID>)
-where
+pub fn intersect_brute_force_flex<'a, B, ID>(
+    a: &BBoxSet<B, ID>,
+    b: &BBoxSet<B, ID>,
+    mut out: AnswerFormat<'a, ID>,
+) where
     B: BBox,
     ID: Copy,
 {
@@ -205,24 +212,23 @@ where
             for bidx in start..a.boxes.len() {
                 let (bbox2, id2) = a.boxes[bidx];
                 if bbox.intersects(&bbox2) {
-                    match out{
-                        AnswerFormat::Index(ref mut out)=>out.push((aidx, bidx)),
-                        AnswerFormat::Ident(ref mut out)=>out.push((id, id2)),
-                        AnswerFormat::Both(ref mut out)=>out.push(((aidx, aidx),(id, id2))),
+                    match out {
+                        AnswerFormat::Index(ref mut out) => out.push((aidx, bidx)),
+                        AnswerFormat::Ident(ref mut out) => out.push((id, id2)),
+                        AnswerFormat::Both(ref mut out) => out.push(((aidx, bidx), (id, id2))),
                     }
-
                 }
             }
             start += 1;
         }
     } else {
         for (aidx, &(bbox, id)) in a.boxes.iter().enumerate() {
-            for (bidx, &(bbox2, id2)) in b.boxes.iter().enumerate()  {
+            for (bidx, &(bbox2, id2)) in b.boxes.iter().enumerate() {
                 if bbox.intersects(&bbox2) {
-                    match out{
-                        AnswerFormat::Index(ref mut out)=>out.push((aidx, bidx)),
-                        AnswerFormat::Ident(ref mut out)=>out.push((id, id2)),
-                        AnswerFormat::Both(ref mut out)=>out.push(((aidx, bidx),(id, id2))),
+                    match out {
+                        AnswerFormat::Index(ref mut out) => out.push((aidx, bidx)),
+                        AnswerFormat::Ident(ref mut out) => out.push((id, id2)),
+                        AnswerFormat::Both(ref mut out) => out.push(((aidx, bidx), (id, id2))),
                     }
                 }
             }
